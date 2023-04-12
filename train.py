@@ -14,6 +14,7 @@ random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
+##################### add debugging using asserts in the future versions
 
 
 class Trainer(object):
@@ -46,9 +47,9 @@ class Trainer(object):
         self.model.train()
         loss_history = {'disc_losses': [], 'gen_losses': []}
         progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
-        for epoch, data, features in progress_bar:
+        for epoch, (data, features) in progress_bar:
             real_images = data.to(self.device)
-            features = features.to(self.device)
+            features = torch.tensor(features, requires_grad=True).to(self.device)
 
             disc_loss = self.model.disc_step(real_images, features)
 
@@ -70,8 +71,8 @@ class Trainer(object):
                                 requires_grad=False).to(self.device)
             data = Variable(torch.from_numpy(self.Y_val[epoch:epoch + self.batch_size]),
                             requires_grad=False).to(self.device)
-            g_loss = self.model.gen_loss(features, requires_grad=False)
-            d_loss = self.model.disc_loss(data, features, requires_grad=False)
+            g_loss = self.model.gen_loss(features)
+            d_loss = self.model.disc_loss(data, features)
             losses += np.array([d_loss.item(), g_loss.item()])
         losses /= (len(self.X_val) / self.batch_size)
         return losses[0], losses[1]

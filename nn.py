@@ -85,7 +85,6 @@ class SingleBlock(nn.Module):
 class ConvBlock(nn.Module):
     def __init__(self, filters, kernel_sizes, paddings, activations, poolings, kernel_init, input_shape=None, output_shape=None, dropouts=None):
         super().__init__()
-        print(input_shape)
         self.layers = nn.ModuleList()
         self.output_shape = output_shape
         self.activations = []
@@ -101,6 +100,7 @@ class ConvBlock(nn.Module):
                 if act:
                     self.layers.append(act)
             else:
+                print(filters[i-1])
                 self.layers.append(nn.Conv2d(in_channels=filters[i-1], out_channels=filters[i], kernel_size=ksize, padding=padding))
                 if act:
                     self.layers.append(act)
@@ -138,8 +138,6 @@ class VImgConcat(torch.nn.Module):
         block_input = torch.cat((block_input, reshaped_vec), dim=-1)
 
         block_input = torch.permute(block_input, (0, 3, 1, 2))
-        print(block_input.shape)
-        print(self.block)
         block_output = self.block(block_input)
 
         outputs = [input_vec, block_output]
