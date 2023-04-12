@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import PIL
-
+import torch
 from .gaussian_metrics import get_val_metric_v, _METRIC_NAMES
 from .trends import make_trend_plot
 
@@ -12,15 +12,15 @@ mpl.use("Agg")
 
 
 def make_histograms(
-    data_real,
-    data_gen,
-    title,
-    figsize=(8, 8),
-    n_bins=100,
-    logy=False,
-    pdffile=None,
-    label_real='real',
-    label_gen='generated',
+        data_real,
+        data_gen,
+        title,
+        figsize=(8, 8),
+        n_bins=100,
+        logy=False,
+        pdffile=None,
+        label_real='real',
+        label_gen='generated',
 ):
     left = min(data_real.min(), data_gen.min())
     right = max(data_real.max(), data_gen.max())
@@ -46,7 +46,7 @@ def make_histograms(
 
 
 def make_metric_plots(
-    images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False, label_real='real', label_gen='generated'
+        images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False, label_real='real', label_gen='generated'
 ):
     plots = {}
     if make_pdfs:
@@ -111,14 +111,10 @@ def make_metric_plots(
 
 
 def make_images_for_model(
-    model, sample, return_raw_data=False, calc_chi2=False, gen_more=None, batch_size=128, pdf_outputs=None
+        model, sample, return_raw_data=False, calc_chi2=False, gen_more=None, batch_size=128, pdf_outputs=None
 ):
     X, Y = sample
     assert X.ndim == 2
-    if model.data_version == 'data_v4plus':
-        assert X.shape[1] == 6
-    else:
-        assert X.shape[1] == 4
     make_pdfs = pdf_outputs is not None
     if make_pdfs:
         assert isinstance(pdf_outputs, list)
@@ -128,8 +124,9 @@ def make_images_for_model(
         gen_features = X
     else:
         gen_features = np.tile(X, [gen_more] + [1] * (X.ndim - 1))
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     gen_scaled = np.concatenate(
-        [model.make_fake(gen_features[i : i + batch_size]).numpy() for i in range(0, len(gen_features), batch_size)],
+        [model.make_fake(torch.tensor(gen_features, dtype=torch.float32).to(device)[i : i + batch_size]).view(-1, 8, 16).detach().cpu().numpy() for i in range(0, len(gen_features), batch_size)],
         axis=0,
     )
     real = model.scaler.unscale(Y)
@@ -232,6 +229,7 @@ def evaluate_model(model, path, sample, gen_sample_name=None):
 
 
 def plot_individual_images(real, gen, n=10, pdffile=None, label_real='real', label_gen='generated'):
+    print(gen.ndim)
     assert real.ndim == 3 == gen.ndim
     assert real.shape[1:] == gen.shape[1:]
     N_max = min(len(real), len(gen))
