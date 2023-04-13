@@ -45,7 +45,7 @@ class Model(object):
         self.optimizer_g.step()
         return errG
 
-    def gen_loss(self, features, requires_grad=True):
+    def gen_loss(self, features):
         fake_images = self.make_fake(features)
         fake_output = self.discriminator([features, fake_images])
         errG = -torch.mean(fake_output)
@@ -58,7 +58,7 @@ class Model(object):
         self.optimizer_d.step()
         return errD
 
-    def disc_loss(self, batch, features, requires_grad=True):
+    def disc_loss(self, batch, features):
         real_output = self.discriminator([features, batch])
         errD_real = torch.mean(real_output)
         fake_images = self.make_fake(features)

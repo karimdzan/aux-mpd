@@ -49,7 +49,7 @@ class Trainer(object):
         progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
         for epoch, (data, features) in progress_bar:
             real_images = data.to(self.device)
-            features = torch.tensor(features, requires_grad=True).to(self.device)
+            features = torch.tensor(features, requires_grad=True, dtype=torch.float32).to(self.device)
 
             disc_loss = self.model.disc_step(real_images, features)
 
@@ -67,10 +67,15 @@ class Trainer(object):
         self.model.eval()
         losses = np.array([0, 0], dtype='float32')
         for epoch in range(0, len(self.X_val), self.batch_size):
-            features = Variable(torch.from_numpy(self.X_val[epoch:epoch + self.batch_size]),
-                                requires_grad=False).to(self.device)
-            data = Variable(torch.from_numpy(self.Y_val[epoch:epoch + self.batch_size]),
-                            requires_grad=False).to(self.device)
+            features = torch.tensor(self.X_val[epoch:epoch + self.batch_size],
+                                    requires_grad=False,
+                                    device=self.device,
+                                    dtype=torch.float32)
+            print(features)
+            data = torch.tensor(self.Y_val[epoch:epoch + self.batch_size],
+                                requires_grad=False,
+                                device=self.device,
+                                dtype=torch.float32)
             g_loss = self.model.gen_loss(features)
             d_loss = self.model.disc_loss(data, features)
             losses += np.array([d_loss.item(), g_loss.item()])
