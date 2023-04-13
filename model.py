@@ -77,7 +77,7 @@ class Model(object):
 
     def calculate_penalty(self, model, real, fake, features, device):
         alpha = torch.randn((real.size(0), 1, 1, 1), device=device)
-        interpolates = (alpha * real + ((1 - alpha) * fake)).requires_grad_(True)
+        interpolates = torch.tensor(alpha * real.view(-1, 1, 8, 16) + ((1 - alpha) * fake), requires_grad=True, device=device, dtype=)
 
         model_interpolates = model([features, interpolates])
         grad_outputs = torch.ones(model_interpolates.size(), device=device, requires_grad=False)

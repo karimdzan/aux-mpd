@@ -71,7 +71,6 @@ class Trainer(object):
                                     requires_grad=False,
                                     device=self.device,
                                     dtype=torch.float32)
-            print(features)
             data = torch.tensor(self.Y_val[epoch:epoch + self.batch_size],
                                 requires_grad=False,
                                 device=self.device,
