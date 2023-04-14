@@ -38,18 +38,20 @@ class Model(object):
         noise = torch.normal(0, 1, size=(features.shape[0], self.latent_dim), device=self.device)
         return self.generator(torch.cat((features, noise), axis=-1)).view(-1, 1, 8, 16)
 
-    def gen_step(self, features):
+    def gen_step(self, batch, features):
         self.generator.zero_grad()
-        errG = self.gen_loss(features)
+        errG = self.gen_loss(batch, features)
         errG.backward()
         self.optimizer_g.step()
         return errG
 
-    def gen_loss(self, features):
+    def gen_loss(self, batch, features):
+        real_output = self.discriminator([features, batch])
+        errD_real = torch.mean(real_output)
         fake_images = self.make_fake(features)
         fake_output = self.discriminator([features, fake_images])
-        errG = -torch.mean(fake_output)
-        return errG
+        errD_fake = torch.mean(fake_output)
+        return errD_real - errD_fake
 
     def disc_step(self, batch, features):
         self.discriminator.zero_grad()

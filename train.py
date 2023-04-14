@@ -46,15 +46,14 @@ class Trainer(object):
     def train_step(self):
         self.model.train()
         loss_history = {'disc_losses': [], 'gen_losses': []}
-        progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
-        for epoch, (data, features) in progress_bar:
+        for epoch, (data, features) in enumerate(self.train_loader):
             real_images = data.to(self.device)
             features = torch.tensor(features, requires_grad=True, dtype=torch.float32).to(self.device)
 
             disc_loss = self.model.disc_step(real_images, features)
 
             if epoch % self.num_disc_updates == 0:
-                gen_loss = self.model.gen_step(features)
+                gen_loss = self.model.gen_step(real_images, features)
 
                 loss_history['disc_losses'].append(disc_loss)
                 loss_history['gen_losses'].append(gen_loss)
@@ -75,7 +74,7 @@ class Trainer(object):
                                 requires_grad=False,
                                 device=self.device,
                                 dtype=torch.float32)
-            g_loss = self.model.gen_loss(features)
+            g_loss = self.model.gen_loss(data, features)
             d_loss = self.model.disc_loss(data, features)
             losses += np.array([d_loss.item(), g_loss.item()])
         losses /= (len(self.X_val) / self.batch_size)
@@ -87,20 +86,20 @@ class Trainer(object):
 
         loss_history = {'disc_losses': [], 'gen_losses': []}
 
-        summary_callback = WriteHistSummaryCallback(model=self.model,
-                                                    sample=(self.X_val, self.Y_val),
-                                                    save_period=self.save_period,
-                                                    writer=self.writer_val
-                                                    )
-        schedulelr = ScheduleLRCallback(self.model,
-                                        self.writer_val
-                                        )
-
-        saveModel = SaveModelCallback(model=self.model,
-                                      path='checkpoints',
-                                      save_period=self.save_period
-                                      )
-        callbacks = [summary_callback, schedulelr, saveModel]
+        # summary_callback = WriteHistSummaryCallback(model=self.model,
+        #                                             sample=(self.X_val, self.Y_val),
+        #                                             save_period=self.save_period,
+        #                                             writer=self.writer_val
+        #                                             )
+        # schedulelr = ScheduleLRCallback(self.model,
+        #                                 self.writer_val
+        #                                 )
+        #
+        # saveModel = SaveModelCallback(model=self.model,
+        #                               path='checkpoints',
+        #                               save_period=self.save_period
+        #                               )
+        # callbacks = [summary_callback, schedulelr, saveModel]
 
         for epoch in tqdm(range(self.epochs)):
             disc_loss, gen_loss = self.train_step()
@@ -113,8 +112,8 @@ class Trainer(object):
                 "disc loss val": val_loss_disc
             })
 
-            for f in callbacks:
-                f(epoch)
+            # for f in callbacks:
+            #     f(epoch)
 
         wandb.finish()
 
