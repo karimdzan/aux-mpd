@@ -1,10 +1,10 @@
 import torch
 import numpy as np
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import wandb
 import random
-from torch.utils.tensorboard import SummaryWriter
 from torch.autograd import Variable
+import os
 
 from callbacks import ScheduleLRCallback, WriteHistSummaryCallback, SaveModelCallback
 
@@ -37,8 +37,6 @@ class Trainer(object):
         self.train_loader = train_loader
         self.Y_val, self.X_val = val_sample
         self.save_period = save_period
-        self.writer_train = SummaryWriter()
-        self.writer_val = SummaryWriter()
         self.noise_power = noise_power
         self.noise_decay = noise_decay
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -46,10 +44,10 @@ class Trainer(object):
     def train_step(self):
         self.model.train()
         loss_history = {'disc_losses': [], 'gen_losses': []}
+
         for epoch, (data, features) in enumerate(self.train_loader):
             real_images = data.to(self.device)
-            features = torch.tensor(features, requires_grad=True, dtype=torch.float32).to(self.device)
-
+            features = features.type(torch.float32).clone().detach().requires_grad_(True).to(self.device)
             disc_loss = self.model.disc_step(real_images, features)
 
             if epoch % self.num_disc_updates == 0:
@@ -84,16 +82,16 @@ class Trainer(object):
         wandb.login(key='b5bb9b937300c5d613b3a95f676708e5a88d2b7e')     # remove during commit
         wandb.init(project="coursework", entity="karimdzan")
 
-        loss_history = {'disc_losses': [], 'gen_losses': []}
 
         summary_callback = WriteHistSummaryCallback(model=self.model,
                                                     sample=(self.X_val, self.Y_val),
-                                                    save_period=self.save_period,
-                                                    writer=self.writer_val
-                                                    )
-        schedulelr = ScheduleLRCallback(self.model,
-                                        self.writer_val
-                                        )
+                                                    save_period=self.save_period                                                    )
+        schedulelr = ScheduleLRCallback(self.model)
+
+        if not os.path.isdir('checkpoints'):
+            os.mkdir(
+                'checkpoints'
+            )
 
         saveModel = SaveModelCallback(model=self.model,
                                       path='checkpoints',
@@ -119,7 +117,7 @@ class Trainer(object):
 
     def features_noise(self, epoch):
         current_power = self.noise_power / (10 ** (epoch / self.noise_decay))
-        self.writer_train.add_scalar("features noise power", current_power, epoch)
+        wandb.log({f"features noise power at epoch-epoch": current_power})
         return current_power
 
 

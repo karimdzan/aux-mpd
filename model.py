@@ -73,10 +73,6 @@ class Model(object):
         errD = -errD_real + errD_fake + gradient_penalty * self.gp_lambda
         return errD
 
-    def scheduler_step(self):
-        self.gen_scheduler.step()
-        self.disc_scheduler.step()
-
     def calculate_penalty(self, model, real, fake, features, device):
         alpha = torch.randn((real.size(0), 1, 1, 1), device=device)
         interpolates = (alpha * real.view(-1, 1, 8, 16) + ((1 - alpha) * fake)).requires_grad_(True)
