@@ -244,7 +244,6 @@ def plot_individual_images(real, gen, n=10, pdffile=None, label_real='real', lab
 
     fig, axx = plt.subplots(n, 4, figsize=(size_x, size_y))
     axx = [(ax[0], ax[1]) for ax in axx] + [(ax[2], ax[3]) for ax in axx]
-
     for ax, img_real, img_fake in zip(axx, real, gen):
         ax[0].imshow(img_real, aspect='auto')
         ax[0].set_title(label_real)
@@ -261,7 +260,7 @@ def plot_individual_images(real, gen, n=10, pdffile=None, label_real='real', lab
     buf.seek(0)
 
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(-1, 4, img.size[1], img.size[0])
 
 
 def plot_images_mask(real, gen, pdffile=None, label_real='real', label_gen='generated'):
@@ -285,4 +284,5 @@ def plot_images_mask(real, gen, pdffile=None, label_real='real', label_gen='gene
     buf.seek(0)
 
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
+    print(np.array(img.getdata(), dtype=np.uint8).shape)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(-1, 4, img.size[1], img.size[0])
