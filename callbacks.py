@@ -32,9 +32,9 @@ class WriteHistSummaryCallback:
             images, images1, img_amplitude, chi2 = make_images_for_model(self.model, sample=self.sample, calc_chi2=True)
             wandb.log({'chi2': chi2})
             self.writer.add_scalar("chi2", chi2, step)
-            for k, img in images.item():
+            for k, img in images.items():
                 self.writer.add_image(f"img{k}", img, step)
-            for k, img in images1.item():
+            for k, img in images1.items():
                 self.writer.add_image(f"img{k} (amp > 1)", img, step)
 
             self.writer.add_image(f"log10(amplitude + 1)", img_amplitude, step)

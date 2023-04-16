@@ -86,20 +86,20 @@ class Trainer(object):
 
         loss_history = {'disc_losses': [], 'gen_losses': []}
 
-        # summary_callback = WriteHistSummaryCallback(model=self.model,
-        #                                             sample=(self.X_val, self.Y_val),
-        #                                             save_period=self.save_period,
-        #                                             writer=self.writer_val
-        #                                             )
-        # schedulelr = ScheduleLRCallback(self.model,
-        #                                 self.writer_val
-        #                                 )
-        #
-        # saveModel = SaveModelCallback(model=self.model,
-        #                               path='checkpoints',
-        #                               save_period=self.save_period
-        #                               )
-        # callbacks = [summary_callback, schedulelr, saveModel]
+        summary_callback = WriteHistSummaryCallback(model=self.model,
+                                                    sample=(self.X_val, self.Y_val),
+                                                    save_period=self.save_period,
+                                                    writer=self.writer_val
+                                                    )
+        schedulelr = ScheduleLRCallback(self.model,
+                                        self.writer_val
+                                        )
+
+        saveModel = SaveModelCallback(model=self.model,
+                                      path='checkpoints',
+                                      save_period=self.save_period
+                                      )
+        callbacks = [summary_callback, schedulelr, saveModel]
 
         for epoch in tqdm(range(self.epochs)):
             disc_loss, gen_loss = self.train_step()
@@ -112,8 +112,8 @@ class Trainer(object):
                 "disc loss val": val_loss_disc
             })
 
-            # for f in callbacks:
-            #     f(epoch)
+            for f in callbacks:
+                f(epoch)
 
         wandb.finish()
 

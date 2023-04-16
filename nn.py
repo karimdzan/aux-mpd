@@ -100,7 +100,6 @@ class ConvBlock(nn.Module):
                 if act:
                     self.layers.append(act)
             else:
-                print(filters[i-1])
                 self.layers.append(nn.Conv2d(in_channels=filters[i-1], out_channels=filters[i], kernel_size=ksize, padding=padding))
                 if act:
                     self.layers.append(act)
