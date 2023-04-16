@@ -7,6 +7,7 @@ import PIL
 import torch
 from .gaussian_metrics import get_val_metric_v, _METRIC_NAMES
 from .trends import make_trend_plot
+from torchvision.utils import make_grid
 
 mpl.use("Agg")
 
@@ -42,7 +43,7 @@ def make_histograms(
     buf.seek(0)
 
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
+    return img
 
 
 def make_metric_plots(
@@ -229,7 +230,6 @@ def evaluate_model(model, path, sample, gen_sample_name=None):
 
 
 def plot_individual_images(real, gen, n=10, pdffile=None, label_real='real', label_gen='generated'):
-    print(gen.ndim)
     assert real.ndim == 3 == gen.ndim
     assert real.shape[1:] == gen.shape[1:]
     N_max = min(len(real), len(gen))
@@ -256,17 +256,18 @@ def plot_individual_images(real, gen, n=10, pdffile=None, label_real='real', lab
     fig.savefig(buf, format='png')
     if pdffile is not None:
         fig.savefig(pdffile, format='pdf')
+    plt.tight_layout()
     plt.close(fig)
     buf.seek(0)
 
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(-1, 4, img.size[1], img.size[0])
+    return img
 
 
 def plot_images_mask(real, gen, pdffile=None, label_real='real', label_gen='generated'):
     assert real.ndim == 3 == gen.ndim
     assert real.shape[1:] == gen.shape[1:]
-
+    # return make_grid([(real >= 1.0).any(axis=0), (gen >= 1.0).any(axis=0)])
     size_x = 6
     size_y = size_x / real.shape[2] * real.shape[1] * 2.4
 
@@ -280,9 +281,9 @@ def plot_images_mask(real, gen, pdffile=None, label_real='real', label_gen='gene
     fig.savefig(buf, format='png')
     if pdffile is not None:
         fig.savefig(pdffile, format='pdf')
+    plt.tight_layout()
     plt.close(fig)
     buf.seek(0)
 
     img = PIL.Image.open(buf)
-    print(np.array(img.getdata(), dtype=np.uint8).shape)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(-1, 4, img.size[1], img.size[0])
+    return img
