@@ -21,7 +21,10 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
     cats = (x[:, np.newaxis] < bins[np.newaxis, 1:]).argmax(axis=1)
 
     def stats(arr):
-        return (arr.mean(), arr.std() / (len(arr) - 1) ** 0.5, arr.std(), _bootstrap_error(arr, np.std))
+        return arr.mean(), \
+            arr.std() / (len(arr) - 1) ** 0.5, \
+            arr.std(), \
+            _bootstrap_error(arr, np.std)
 
     mean, mean_err, std, std_err, bin_centers = np.array(
         [
@@ -44,16 +47,16 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
 
 
 def make_trend_plot(
-    feature_real,
-    real,
-    feature_gen,
-    gen,
-    name,
-    calc_chi2=False,
-    figsize=(8, 8),
-    pdffile=None,
-    label_real='real',
-    label_gen='generated',
+        feature_real,
+        real,
+        feature_gen,
+        gen,
+        name,
+        calc_chi2=False,
+        figsize=(8, 8),
+        pdffile=None,
+        label_real='real',
+        label_gen='generated',
 ):
     feature_real = feature_real.squeeze()
     feature_gen = feature_gen.squeeze()
@@ -96,7 +99,7 @@ def make_trend_plot(
         real_err2 = real_mean_err**2 + real_std_err**2
 
         chi2 = ((gen_upper - real_upper) ** 2 / (gen_err2 + real_err2)).sum() + (
-            (gen_lower - real_lower) ** 2 / (gen_err2 + real_err2)
+                (gen_lower - real_lower) ** 2 / (gen_err2 + real_err2)
         ).sum()
 
         return img_data, chi2

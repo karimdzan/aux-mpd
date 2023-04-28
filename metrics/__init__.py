@@ -54,6 +54,7 @@ def make_metric_plots(
         pdf_plots = {}
     if calc_chi2:
         chi2 = 0
+        chi2_feature = 0
 
     try:
         metric_real = get_val_metric_v(images_real)
@@ -87,6 +88,8 @@ def make_metric_plots(
                             label_gen=label_gen,
                         )
                         chi2 += chi2_i
+                        if metric_name == 'Sigma1^2':
+                            chi2_feature += chi2_i
                     else:
                         plots[name] = make_trend_plot(
                             feature_real,
@@ -105,6 +108,7 @@ def make_metric_plots(
     result = {'plots': plots}
     if calc_chi2:
         result['chi2'] = chi2
+        result['chi2_feature'] = chi2_feature
     if make_pdfs:
         result['pdf_plots'] = pdf_plots
 
@@ -149,6 +153,7 @@ def make_images_for_model(
     images = metric_plot_results['plots']
     if calc_chi2:
         chi2 = metric_plot_results['chi2']
+        chi2_feature = metric_plot_results['chi2_feature']
     if make_pdfs:
         images_pdf = metric_plot_results['pdf_plots']
         pdf_outputs.append(images_pdf)
@@ -183,6 +188,7 @@ def make_images_for_model(
 
     if calc_chi2:
         result += [chi2]
+        result += [chi2_feature]
 
     return result
 
