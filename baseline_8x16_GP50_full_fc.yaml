@@ -1,5 +1,5 @@
 latent_dim: 32
-batch_size: 32
+batch_size: 64
 lr: 1.e-4
 
 num_disc_updates: 8
@@ -72,5 +72,5 @@ architecture:
         units: [128, 1]
         activations: ['elu', NULL]
         kernel_init: 'glorot_uniform'
-        input_shape: [69,]
+        input_shape: [70,]
         output_shape: NULL
