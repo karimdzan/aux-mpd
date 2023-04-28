@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from tqdm.notebook import tqdm
+from tqdm import trange
 import wandb
 import random
 from torch.autograd import Variable
@@ -43,26 +43,27 @@ class Trainer(object):
 
     def train_step(self):
         self.model.train()
-        loss_history = {'disc_losses': [], 'gen_losses': []}
+        loss_history = {'disc_losses': [], 'gen_losses': [], 'reg_losses': []}
 
         for epoch, (data, features) in enumerate(self.train_loader):
             real_images = data.to(self.device)
             features = features.type(torch.float32).clone().detach().requires_grad_(True).to(self.device)
-            disc_loss = self.model.disc_step(real_images, features)
+            disc_loss, reg_loss = self.model.disc_step(real_images, features)
 
             if epoch % self.num_disc_updates == 0:
                 gen_loss = self.model.gen_step(real_images, features)
-
+                loss_history['reg_losses'].append(reg_loss)
                 loss_history['disc_losses'].append(disc_loss)
                 loss_history['gen_losses'].append(gen_loss)
 
         disc_loss = torch.mean(torch.tensor(loss_history['disc_losses']))
         gen_loss = torch.mean(torch.tensor(loss_history['gen_losses']))
-        return disc_loss, gen_loss
+        reg_loss = torch.mean(torch.tensor(loss_history['reg_losses']))
+        return disc_loss, gen_loss, reg_loss
 
     def test_step(self):
         self.model.eval()
-        losses = np.array([0, 0], dtype='float32')
+        losses = np.array([0, 0, 0], dtype='float32')
         for epoch in range(0, len(self.X_val), self.batch_size):
             features = torch.tensor(self.X_val[epoch:epoch + self.batch_size],
                                     requires_grad=False,
@@ -73,10 +74,10 @@ class Trainer(object):
                                 device=self.device,
                                 dtype=torch.float32)
             g_loss = self.model.gen_loss(data, features)
-            d_loss = self.model.disc_loss(data, features)
-            losses += np.array([d_loss.item(), g_loss.item()])
+            d_loss, r_loss = self.model.disc_loss(data, features)
+            losses += np.array([d_loss.item(), g_loss.item(), r_loss.item()])
         losses /= (len(self.X_val) / self.batch_size)
-        return losses[0], losses[1]
+        return losses[0], losses[1], losses[2]
 
     def train(self):
         wandb.login(key='b5bb9b937300c5d613b3a95f676708e5a88d2b7e')     # remove during commit
@@ -85,7 +86,7 @@ class Trainer(object):
 
         summary_callback = WriteHistSummaryCallback(model=self.model,
                                                     sample=(self.X_val, self.Y_val),
-                                                    save_period=self.save_period                                                    )
+                                                    save_period=self.save_period)
         schedulelr = ScheduleLRCallback(self.model)
 
         if not os.path.isdir('checkpoints'):
@@ -99,17 +100,18 @@ class Trainer(object):
                                       )
         callbacks = [summary_callback, schedulelr, saveModel]
 
-        for epoch in tqdm(range(self.epochs)):
-            disc_loss, gen_loss = self.train_step()
-            val_loss_disc, val_loss_gen = self.test_step()
+        for epoch in trange(self.epochs):
+            disc_loss, gen_loss, reg_loss_train = self.train_step()
+            val_loss_disc, val_loss_gen, reg_loss_val = self.test_step()
             wandb.log({
                 "Epoch": epoch,
                 "gen loss train": gen_loss,
                 "disc loss train": disc_loss,
+                "reg_loss_train": reg_loss_train,
+                "reg_loss_val": reg_loss_val,
                 "gen loss val": val_loss_gen,
                 "disc loss val": val_loss_disc
             })
-
             for f in callbacks:
                 f(epoch)
 

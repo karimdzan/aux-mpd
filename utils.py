@@ -38,13 +38,12 @@ def print_args(args):
 
 def parse_args():
     args = make_parser().parse_args()
-    print_args(args)
     return args
 
 
 def load_config(file):
-    with open(file, 'r') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
+    with open(file) as parameters:
+        config = yaml.safe_load(parameters)
 
     assert (config['feature_noise_power'] is None) == (
             config['feature_noise_decay'] is None
@@ -121,11 +120,11 @@ class LoadData(Dataset):
 
 
 def load_data(data_version, scaler, transform, bs):
-    data, features = read_csv_2d(filename='data/' + data_version + '/csv/digits.csv', strict=False)
+    data, features = read_csv_2d(filename='data/' + data_version + '/digits.csv', strict=False)
     data = scaler.scale(data)
     data = np.float32(data)
     features = preprocess_features(np.float32(features))
     Y_train, Y_test, X_train, X_test = train_test_split(data, features, test_size=0.25, random_state=42)
     train_dataset = LoadData(Y_train, X_train, transform)
-    train_loader = DataLoader(train_dataset, batch_size=bs, num_workers=2, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=bs, num_workers=4, pin_memory=True)
     return train_loader, (Y_test, X_test)

@@ -3,6 +3,8 @@ from torch.autograd import Variable
 from nn import BuildModel
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from scalers import get_scaler
+import torch.nn as nn
+from metrics.gaussian_metrics import get_val_metric_v
 
 
 class Model(object):
@@ -36,7 +38,7 @@ class Model(object):
 
     def make_fake(self, features):
         noise = torch.normal(0, 1, size=(features.shape[0], self.latent_dim), device=self.device)
-        return self.generator(torch.cat((features, noise), axis=-1)).view(-1, 1, 8, 16)
+        return self.generator(torch.cat((features, noise), axis=-1))[0].view(-1, 1, 8, 16)
 
     def gen_step(self, batch, features):
         self.generator.zero_grad()
@@ -46,38 +48,44 @@ class Model(object):
         return errG
 
     def gen_loss(self, batch, features):
-        real_output = self.discriminator([features, batch])
+        real_output = self.discriminator([features, batch])[0]
         errD_real = torch.mean(real_output)
         fake_images = self.make_fake(features)
-        fake_output = self.discriminator([features, fake_images])
+        fake_output = self.discriminator([features, fake_images])[0]
         errD_fake = torch.mean(fake_output)
         return errD_real - errD_fake
 
     def disc_step(self, batch, features):
         self.discriminator.zero_grad()
-        errD = self.disc_loss(batch, features)
+        errD, reg_loss = self.disc_loss(batch, features)
         errD.backward()
         self.optimizer_d.step()
-        return errD
+        return errD, reg_loss.detach().clone()
 
     def disc_loss(self, batch, features):
-        real_output = self.discriminator([features, batch])
+        real_output = self.discriminator([features, batch])[0]
         errD_real = torch.mean(real_output)
+
         fake_images = self.make_fake(features)
-        fake_output = self.discriminator([features, fake_images])
+        output = self.discriminator([features, fake_images])
+        fake_output, reg_output = output[0], output[1]
+        real_metric = get_val_metric_v(self.scaler.unscale(batch.view(-1, 8, 16).cpu().detach().numpy())).T[-3]
+        reg_loss = nn.MSELoss()(reg_output,
+                                torch.tensor(real_metric, requires_grad=True, device=self.device, dtype=torch.float32).view(-1, 1))
         errD_fake = torch.mean(fake_output)
+
         gradient_penalty = self.calculate_penalty(self.discriminator,
                                                   batch.data, fake_images.data,
                                                   features,
                                                   self.device)
-        errD = -errD_real + errD_fake + gradient_penalty * self.gp_lambda
-        return errD
+        errD = -errD_real + errD_fake + gradient_penalty * self.gp_lambda + reg_loss
+        return errD, reg_loss
 
     def calculate_penalty(self, model, real, fake, features, device):
         alpha = torch.randn((real.size(0), 1, 1, 1), device=device)
         interpolates = (alpha * real.view(-1, 1, 8, 16) + ((1 - alpha) * fake)).requires_grad_(True)
 
-        model_interpolates = model([features, interpolates])
+        model_interpolates = model([features, interpolates])[0]
         grad_outputs = torch.ones(model_interpolates.size(), device=device, requires_grad=False)
 
         gradients = torch.autograd.grad(

@@ -31,8 +31,12 @@ class WriteHistSummaryCallback:
 
     def __call__(self, step):
         if step % self.save_period == 0:
-            images, images1, img_amplitude, chi2 = make_images_for_model(self.model, sample=self.sample, calc_chi2=True)
-            wandb.log({'chi2': chi2})
+            images, images1, img_amplitude, chi2, chi2_feature = make_images_for_model(self.model, sample=self.sample, calc_chi2=True)
+            wandb.log({'chi2': chi2,
+                       'chi2_Sigma1^2': chi2_feature
+                       })
+            print(chi2)
+            print(chi2_feature)
             for k, img in images.items():
                 img_log = wandb.Image(img)
                 wandb.log({"images": img_log})
