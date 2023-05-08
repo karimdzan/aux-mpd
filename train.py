@@ -61,9 +61,11 @@ class Trainer(object):
         reg_loss = torch.mean(torch.tensor(loss_history['reg_losses']))
         return disc_loss, gen_loss, reg_loss
 
+    # @torch.no_grad()
     def test_step(self):
         self.model.eval()
         losses = np.array([0, 0, 0], dtype='float32')
+        t = 0
         for epoch in range(0, len(self.X_val), self.batch_size):
             features = torch.tensor(self.X_val[epoch:epoch + self.batch_size],
                                     requires_grad=False,
@@ -76,7 +78,8 @@ class Trainer(object):
             g_loss = self.model.gen_loss(data, features)
             d_loss, r_loss = self.model.disc_loss(data, features)
             losses += np.array([d_loss.item(), g_loss.item(), r_loss.item()])
-        losses /= (len(self.X_val) / self.batch_size)
+            t += 1
+        losses /= t
         return losses[0], losses[1], losses[2]
 
     def train(self):
@@ -89,16 +92,17 @@ class Trainer(object):
                                                     save_period=self.save_period)
         schedulelr = ScheduleLRCallback(self.model)
 
-        if not os.path.isdir('checkpoints'):
-            os.mkdir(
-                'checkpoints'
-            )
+        # if not os.path.isdir('checkpoints'):
+        #     os.mkdir(
+        #         'checkpoints'
+        #     )
 
-        saveModel = SaveModelCallback(model=self.model,
-                                      path='checkpoints',
-                                      save_period=self.save_period
-                                      )
-        callbacks = [summary_callback, schedulelr, saveModel]
+        # saveModel = SaveModelCallback(model=self.model,
+        #                               path='checkpoints',
+        #                               save_period=self.save_period
+        #                               )
+        # callbacks = [summary_callback, schedulelr, saveModel]
+        callbacks = [summary_callback, schedulelr]
 
         for epoch in trange(self.epochs):
             disc_loss, gen_loss, reg_loss_train = self.train_step()

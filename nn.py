@@ -92,7 +92,7 @@ class SingleBlock(nn.Module):
 activation_reg = {}
 def get_activation_by_name(name):
     def hook(model, input, output):
-        activation_reg[name] = output.detach().clone()
+        activation_reg[name] = output
     return hook
 
 
@@ -107,8 +107,9 @@ class Regressor(nn.Module):
         # self.conv2 = nn.Conv2d(in_channels=filter,
         #                        out_channels=2 * filter,
         #                        kernel_size=kernel_size)
-        self.activation = get_activation('elu')
+        self.activation = get_activation('relu')
         self.fc = nn.Linear(in_features=filter, out_features=1)
+        self.dropout = nn.Dropout(0.05)
         self.weight_init = weights_init_xavier
         self.conv1.apply(self.weight_init)
         # self.conv2.apply(self.weight_init)
@@ -117,6 +118,7 @@ class Regressor(nn.Module):
     def forward(self, x): #--> (32, 64, 4, 4)
         x = self.conv1(x) #--> (32, 64, 1, 1)
         x = self.activation(x)
+        x = self.dropout(x)
         x = x.view(-1, 64)
         # x = self.conv2(x) #--> (32, 64, 1, 1)
         # x = self.activation(x)
@@ -148,7 +150,7 @@ class ConvBlock(nn.Module):
                 named_modules.append((f"MaxPool_{i}", nn.MaxPool2d(pooling)))
         # self.modules = nn.Sequential(*self.layers)
         self.layers = nn.Sequential(OrderedDict(named_modules))
-        self.layers.MaxPool_3.register_forward_hook(get_activation_by_name('MaxPool_3'))
+        self.layers.MaxPool_2.register_forward_hook(get_activation_by_name('MaxPool_2'))
         if kernel_init == nn.init.xavier_uniform_:
             self.weight_init = weights_init_xavier
         else:
@@ -160,7 +162,7 @@ class ConvBlock(nn.Module):
         x = self.layers(x)
         if self.output_shape:
             x = x.view(-1, self.output_shape)
-        reg_output = self.reg(activation_reg['MaxPool_3'])
+        reg_output = self.reg(activation_reg['MaxPool_2'])
         return x, reg_output
 
 
