@@ -9,7 +9,7 @@ from model import Model
 def main():
     args = parse_args()
     # config_path = str(model_path / 'config.yaml')
-    config_path = 'baseline_8x16_GP50_full_fc.yaml'  # add support for checkpoints importing
+    config_path = 'baseline_8x16_GP50_full_fc-2.yaml'  # add support for checkpoints importing
     args.config = config_path
     config = load_config(args.config)
 

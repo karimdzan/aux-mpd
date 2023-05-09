@@ -58,19 +58,19 @@ architecture:
         block:
           block_type: 'conv'
           arguments:
-            filters: [16, 16, 32, 32, 64]
+            filters: [16, 32, 64, 64, 128]
             kernel_sizes: [3, 3, 3, 3, 2]
             paddings: ['same', 'same', 'same', 'valid', 'valid']
             activations: ['elu', 'elu', 'elu', 'elu', 'elu']
-            poolings: [NULL, [1, 2], 2, NULL, NULL]
+            poolings: [[1, 2], NULL, 2, NULL, NULL]
             kernel_init: 'glorot_uniform'
             input_shape: 6
-            output_shape: 64
+            output_shape: 128
             dropouts: [0.02, 0.02, 0.02, 0.02, 0.02]
     - block_type: 'fully_connected'
       arguments:
         units: [128, 1]
         activations: ['elu', NULL]
         kernel_init: 'glorot_uniform'
-        input_shape: [70,]
+        input_shape: [134,]
         output_shape: NULL

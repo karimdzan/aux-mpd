@@ -109,18 +109,18 @@ class Regressor(nn.Module):
         #                        kernel_size=kernel_size)
         self.activation = get_activation('relu')
         self.fc = nn.Linear(in_features=filter, out_features=1)
-        self.dropout = nn.Dropout(0.05)
+        # self.dropout = nn.Dropout(0.05)
         self.weight_init = weights_init_xavier
         self.conv1.apply(self.weight_init)
         # self.conv2.apply(self.weight_init)
         self.fc.apply(self.weight_init)
 
-    def forward(self, x): #--> (32, 64, 4, 4)
-        x = self.conv1(x) #--> (32, 64, 1, 1)
+    def forward(self, x): #--> (128, 64, 4, 4)
+        x = self.conv1(x) #--> (128, 64, 1, 1)
         x = self.activation(x)
-        x = self.dropout(x)
-        x = x.view(-1, 64)
-        # x = self.conv2(x) #--> (32, 64, 1, 1)
+        # x = self.dropout(x)
+        x = x.view(-1, 128)
+        # x = self.conv2(x) #--> (128, 64, 1, 1)
         # x = self.activation(x)
         x = self.fc(x)
         return self.activation(x)
@@ -132,7 +132,7 @@ class ConvBlock(nn.Module):
         self.output_shape = output_shape
         self.activations = []
         named_modules = []
-        self.reg = Regressor(in_channels=32, kernel_size=3, filter=64)
+        self.reg = Regressor(in_channels=64, kernel_size=3, filter=128)
         for str in activations:
             self.activations.append(get_activation(str))
         for i, (filter, ksize, padding, act, pooling) in enumerate(zip(filters, kernel_sizes, paddings, self.activations, poolings)):
