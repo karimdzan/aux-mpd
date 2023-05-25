@@ -21,7 +21,7 @@ def main():
     model = Model(config)
 
     train_loader, val_sample = load_data(config['data_version'], scaler, transform, config['batch_size'])
-
+    
     trainer = Trainer(model,
                       train_loader,
                       val_sample,

@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 custom_objects = {}
 
-activations = {'relu': nn.ReLU(), 'elu': nn.ELU()}
+activations = {'relu': nn.ReLU(), 'elu': nn.ELU(), 'silu' : nn.SiLU(), 'leaky_relu' : nn.LeakyReLU(0.1)}
 
 
 class CustomActivation(nn.Module):
@@ -62,6 +62,8 @@ class FC(nn.Module):       #fully connected convolutional block
         if self.output_shape:
             x = x.view(-1, *self.output_shape)
         return [x]
+        # return x
+
 
 
 class SingleBlock(nn.Module):
@@ -101,15 +103,15 @@ class Regressor(nn.Module):
     def __init__(self, in_channels, kernel_size, filter, stride=None, padding=None):
         super(Regressor, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=in_channels,
-                               out_channels=filter,
-                               kernel_size=kernel_size,
-                               stride=2) #add padding support if needed
-        # self.conv2 = nn.Conv2d(in_channels=filter,
-        #                        out_channels=2 * filter,
-        #                        kernel_size=kernel_size)
-        self.activation = get_activation('relu')
+                              out_channels=filter,
+                              kernel_size=kernel_size, 
+                              padding='valid', stride=2) #add padding support if needed
+        # self.conv2 = nn.Conv2d(in_channels=filter, 
+        #                        out_channels=filter, 
+        #                        kernel_size=kernel_size, stride=2)
+        self.activation = get_activation('elu')
         self.fc = nn.Linear(in_features=filter, out_features=1)
-        # self.dropout = nn.Dropout(0.05)
+        self.dropout = nn.Dropout(0.05)
         self.weight_init = weights_init_xavier
         self.conv1.apply(self.weight_init)
         # self.conv2.apply(self.weight_init)
@@ -119,11 +121,31 @@ class Regressor(nn.Module):
         x = self.conv1(x) #--> (128, 64, 1, 1)
         x = self.activation(x)
         # x = self.dropout(x)
-        x = x.view(-1, 128)
         # x = self.conv2(x) #--> (128, 64, 1, 1)
         # x = self.activation(x)
+        # x = self.dropout(x)
+        x = x.view(-1, 128)
         x = self.fc(x)
         return self.activation(x)
+    
+class SelfAttention(nn.Module):
+    def __init__(self, n_channels):
+        self.query, self.key, self.value = [self._conv(n_channels, c) for c in (n_channels//8, 
+                                                                                n_channels//8, 
+                                                                                n_channels)]
+        self.gamma = nn.Parameter(tensor([0.]))
+
+    def _conv(self, n_in, n_out):
+        return ConvLayer(n_in, n_out, ks=1, ndim=1, norm_type=NormType.Spectral, act_cls=None, bias=False)
+
+    def forward(self, x):
+        #Notation from the paper.
+        size = x.size()
+        x = x.view(*size[:2],-1)
+        f,g,h = self.query(x),self.key(x),self.value(x)
+        beta = F.softmax(torch.bmm(f.transpose(1,2), g), dim=1)
+        o = self.gamma * torch.bmm(h, beta) + x
+        return o.view(*size).contiguous()
 
 
 class ConvBlock(nn.Module):
@@ -150,7 +172,7 @@ class ConvBlock(nn.Module):
                 named_modules.append((f"MaxPool_{i}", nn.MaxPool2d(pooling)))
         # self.modules = nn.Sequential(*self.layers)
         self.layers = nn.Sequential(OrderedDict(named_modules))
-        self.layers.MaxPool_2.register_forward_hook(get_activation_by_name('MaxPool_2'))
+        self.layers.MaxPool_1.register_forward_hook(get_activation_by_name('MaxPool_1'))
         if kernel_init == nn.init.xavier_uniform_:
             self.weight_init = weights_init_xavier
         else:
@@ -162,8 +184,10 @@ class ConvBlock(nn.Module):
         x = self.layers(x)
         if self.output_shape:
             x = x.view(-1, self.output_shape)
-        reg_output = self.reg(activation_reg['MaxPool_2'])
+        reg_output = self.reg(activation_reg['MaxPool_1'])
         return x, reg_output
+        # return x
+
 
 
 class VImgConcat(torch.nn.Module):
@@ -185,11 +209,14 @@ class VImgConcat(torch.nn.Module):
 
         block_input = torch.permute(block_input, (0, 3, 1, 2))
         block_output, reg_output = self.block(block_input)
+        # block_output = self.block(block_input)
 
         outputs = [input_vec, reg_output, block_output]
+        # outputs = [input_vec, block_output]
         if self.concat_outputs:
             outputs = torch.cat(outputs, dim=1)
         return [outputs, reg_output]
+        # return outputs
 
 
 def build_block(block_type, arguments):
